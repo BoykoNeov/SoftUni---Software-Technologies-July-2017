@@ -1,0 +1,1 @@
+Contins the whole calculator with node modules in 7z file, and all other files in uncompressed form
