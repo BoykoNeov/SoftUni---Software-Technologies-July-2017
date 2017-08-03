@@ -75,5 +75,20 @@ module.exports = {
     logout: (req, res) => {
         req.logOut();
         res.redirect('/');
+    },
+
+    details: (req, res) => {
+
+        let errorMsg = '';
+
+        if (!req.isAuthenticated()) {
+            res.redirect('/');
+            return;
+        }
+
+        let id = req.params.userId;
+        User.findById(id).then(user => {
+        res.render('user/details', user)
+        })
     }
 };
