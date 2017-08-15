@@ -50,6 +50,7 @@ namespace Blog.Controllers
         }
 
         //Get Artice/Create/
+        [Authorize]
         public ActionResult Create()
         {
             return View();
@@ -57,6 +58,7 @@ namespace Blog.Controllers
 
         //POST: Article/Create/
         [HttpPost]
+        [Authorize]
         public ActionResult Create(Article article)
         {
             if (ModelState.IsValid)
@@ -98,6 +100,11 @@ namespace Blog.Controllers
                     return HttpNotFound();
                 }
 
+                if (!IsUserAuthorizedToEdit(currentArticle))
+                {
+                    return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
+                }
+
                 return View(currentArticle);
             }
         }
@@ -122,11 +129,87 @@ namespace Blog.Controllers
                     return HttpNotFound();
                 }
 
+                if (!IsUserAuthorizedToEdit(currentArticle))
+                {
+                    return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
+                }
+
                 db.Articles.Remove(currentArticle);
                 db.SaveChanges();
 
                 return RedirectToAction("Index");
             }
+        }
+
+        // Get Article/Edit
+        public ActionResult Edit(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+
+            using (BlogDbContext db = new BlogDbContext())
+            {
+                Article currentArticle = db.Articles.Where(a => a.Id == id)
+                    .Include(a => a.Author)
+                    .FirstOrDefault();
+
+                if (currentArticle == null)
+                {
+                    return HttpNotFound();
+                }
+
+                if (!IsUserAuthorizedToEdit(currentArticle))
+                {
+                    return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
+                }
+
+                    var model = new ArticleViewModel
+                {
+                    Id = currentArticle.Id,
+                    Title = currentArticle.Title,
+                    Content = currentArticle.Content
+                };
+
+                return View(model);
+            }
+        }
+
+        [HttpPost]
+        public ActionResult Edit(ArticleViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                // edit the article in the DB
+                using (BlogDbContext db = new BlogDbContext())
+                {
+                    Article currentArticle = db.Articles.FirstOrDefault(a => a.Id == model.Id);
+
+                    if (!IsUserAuthorizedToEdit(currentArticle))
+                    {
+                        return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
+                    }
+
+                    currentArticle.Title = model.Title;
+                    currentArticle.Content = model.Content;
+
+                    db.Entry(currentArticle).State = EntityState.Modified;
+                    db.SaveChanges();
+                }
+
+                return RedirectToAction("Index");
+            }
+
+            return View(model);
+        }
+
+        private bool IsUserAuthorizedToEdit(Article currentArticle)
+        {
+            bool isAdmin = this.User.IsInRole("Admin");
+            bool isAuthor = currentArticle.IsAuthor(this.User.Identity.Name);
+
+            return isAdmin || isAuthor;
         }
     }
 }

@@ -26,5 +26,10 @@ namespace Blog.Models
         {
             this.DateAdded = DateTime.Now;
         }
+
+        public bool IsAuthor(string name)
+        {
+            return this.Author.UserName.Equals(name);
+        }
     }
 }
