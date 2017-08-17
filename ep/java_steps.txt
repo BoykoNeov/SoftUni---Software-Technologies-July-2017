@@ -1,0 +1,120 @@
+Import project, maven, next next ...
+View -> tool list ->todo      - можем да видим всички todo
+
+3. Go to entity folder and edit the model (task in this case)
+@Entity
+@Table(name = "tasks")
+public class Task {
+   // declares this as id , and to be automatically generated
+   @Id
+   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private int id;
+  private String title;
+  private String comments;
+
+Add @id and @GeneratedValue(strategy = GenerationType.IDENTITY) above id
+
+Autogenerate getters and setters
+Autogenerate constructor with all fields and with and empty constructor (for hibernate)
+
+4. Add above the getter methods (not neccessary above id) @Column(nullable = false)
+
+5. Go to bindingModel and edit
+Copy paste the content from the model, remove all lines with @, rename the constructors, remove the id field
+The binding model is to collect information sent by the user and to send model information to the view.
+Remove unnecessary usings
+
+6.In order for the project to be able to boot, MySQL must be started from XAMPP !
+Според други пък трябва да се спре това от MySQL и да се пусне отдругаде (мария?)
+
+7. We can add to resources/templates/application.properties
+server.port = 8000
+and specify which port to run
+
+7a. In the same file:
+# Hibernate ddl auto (create, create-drop, update): with "update" the database
+# schema will be automatically updated accordingly to java entities found in
+# the project
+# Using "create" will delete and recreate the tables every time the project is started
+spring.jpa.hibernate.ddl-auto = update
+
+In order to update the db when models change
+
+8.go to controllers - TaskController (in this case)
+Write in @GetMapping(“/”)
+
+// get all tasks from the task repository
+List<Task> tasks = taskRepository.findAll();
+
+model.addAttribute("tasks", tasks);
+-> the above line adds tasks to the viewmodel
+9. Edit the get mapping of create:
+@GetMapping("/create")
+public String create(Model model) {
+  
+   model.addAttribute("view", "task/create");
+   return "base-layout";
+}
+Now the create worm should visualize
+
+10.edit the create post mapping
+@PostMapping("/create")
+public String createProcess(Model model, TaskBindingModel taskBindingModel) {
+
+   // redirects to main page if the viewmodel is null
+   if (taskBindingModel == null){
+       return "redirect:/";
+   }
+
+   // redirects to main page if the title or the comments are not entered and submitted
+   if (taskBindingModel.getTitle().equals("") || taskBindingModel.getComments().equals("")){
+       return "redirect:/";
+   }
+
+   //creates a new task with the info from the taskbindingmodel and saves it to the database
+   Task task = new Task(taskBindingModel.getTitle(), taskBindingModel.getComments());
+   taskRepository.saveAndFlush(task);
+
+   //redirects to main page
+   return "redirect:/";
+}
+
+11.Edit the getmapping for delete:
+@GetMapping("/delete/{id}")
+public String delete(Model model, @PathVariable int id) {
+
+   Task task = taskRepository.findOne(id);
+
+   if (task == null){
+       return "redirect:/";
+   }
+
+   // sends the specific view and task (can check the exact name in templates/fragments
+   model.addAttribute("view", "task/delete");
+   model.addAttribute("task", task);
+
+   //if you open the base layout, you can see that it expects a "view", which
+   // (can be seen in its file) expects a "task"
+   return "base-layout";
+}
+
+12. Post mapping for delete:
+@PostMapping("/delete/{id}")
+public String deleteProcess(Model model, @PathVariable int id) {
+
+   //gets the task from the repository
+   Task task = taskRepository.findOne(id);
+
+   //check if its null
+   if (task == null){
+       return "redirect:/";
+   }
+
+   // deletes the task and saves changes
+   taskRepository.delete(task);
+   taskRepository.flush();
+
+   return "redirect:/";
+}
+
+

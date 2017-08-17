@@ -1,0 +1,119 @@
+1. star XAMPP, and run MySQL
+2. run console (or git bash) at php skeleton folder, and type:
+php composer.phar install
+
+3. създаваме база, пак в шела:
+ php bin/console doctrine:database:create
+
+4. start phpStorm and open the project
+5. delete AppBundle/Entity/Task.php
+6. Tools->Run Command (може и от шела)
+7. php bin/console doctrine:generate:entity
+8. AppBundle:Task     (понеже ни трябва Task модел)
+9. press "Enter" (за да изберем 'annotation')
+10. Въвеждаме си имена и опции за полетата, дето ни трябват
+11. Отиваме в новосъздадения файл в Entity, плурализираме името на таблицата
+ (слагаме "s" накрая за множествено число, за да е по-шик ;))
+
+12.Изтриваме във Form TaskType.php
+13. php bin/console doctrine:generate:form AppBundle:Task
+14. go to Form/TaskType.php and remove getBlockPrefix() function
+15. след всеки тип слагаме със запетайка TextType (трябва да изберем правилния вариант,
+който е от симфъни. Тоест трябва да стане $builder->add('title',TextType::class);
+use Symfony\Component\Form\Extension\Core\Type\TextType; - това е правилния using
+
+15.a => при рънване, да се махне от опциите на сървера 'external unknown tool' или квото беше,
+щото с него не върви!
+
+16. Run Command->
+php bin/console doctrine:schema:update --force
+
+17. в TaskController.php, съдържание на функцията index(Request $request) добавяме:
+
+    public function index(Request $request)
+    {
+        // it is important to have the right use " use AppBundle\Entity\Task; "
+        // We specify exactly which table to get fromo the database
+        $taskRepository = $this->getDoctrine()->getRepository(Task::class);
+        $tasks = $taskRepository->findAll();
+        return $this->render('task/index.html.twig', ['tasks' => $tasks]);
+    }
+
+Реално взимаме репозиторията, взимаме всички таскове от нея и ги подаваме на view-то
+
+18. Добавяме в public functionn create(Request $request):
+
+    /**
+     * @param Request $request
+     * @Route("/create", name="create")
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function create(Request $request)
+    {
+        // a variable to hold the request data
+        $task = new Task();
+        $form = $this->createForm(TaskType::class, $task);
+
+        // Handles the request, without this line, the next if will always return false
+        // This 'fills' $task with the request information
+        $form->handleRequest($request);
+
+        // Checks if the form is submitted and valid, if so , redirects to index
+        if ($form->isSubmitted() && $form->isValid()){
+
+            // if the title or the comments are null, returns again to the create form
+            if ($task->getTitle() !== null && $task->getComments() !== null) {
+
+		// creates an entity manager, sends the task to the db and flushes
+                $entityManager = $this->getDoctrine()->getManager();
+                $entityManager->persist($task);
+                $entityManager->flush();
+
+                return $this->redirectToRoute('index');
+            }
+        }
+
+създаваме променлива таск, и нова форма (информацията от която напълваме в $task.
+Ако е събмитната и e валидна, се връщаме в индекса, иначе отиваме на вюто за създаване.
+
+19.Delete function with comments:
+    /**
+     * @Route("/delete/{id}", name="delete")
+     *
+     * @param $id
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function delete($id, Request $request)
+    {
+        // Gets the task from the db
+        $taskRepo = $this->getDoctrine()->getRepository(Task::class);
+        $task = $taskRepo->find($id);
+
+        // redirects to index if task is null (id is not valid)
+        if ($task === null){
+            return $this->redirectToRoute('index');
+        }
+
+        //Creates the form
+        $form = $this->createForm(TaskType::class, $task);
+
+        // Handles the request, without this line, the next if will always return false
+        // This 'fills' $task with the request information
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()){
+
+            // Removes the task from the db and saves changes
+            $entityManager = $this->getDoctrine()->getManager();
+            $entityManager->remove($task);
+            $entityManager->flush();
+
+            return $this->redirectToRoute('index');
+        }
+
+        // sends the task and the form to the view if the form is not submitted or valid
+        return $this->render('task/delete.html.twig', ['task' => $task, 'form' => $form->createView()]);
+    }
+
+

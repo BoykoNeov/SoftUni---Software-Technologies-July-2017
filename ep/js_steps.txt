@@ -1,0 +1,90 @@
+Run gitbash into JS project filder and enter “npm install”
+Run CommandPrompt (doesn’t work with gitbash) and go to project folder. Write:
+	mongod --dbpath c:\data
+
+3. Run Robo 3T and connect to the database
+4. Open models/Task.js and write
+const mongoose = require('mongoose');
+
+5.Open settings -> Languages & Frameworks -> JS -> Libraries and choose:
+	Mongoose - definitely typed
+	HTML
+	Node.js Core
+	JavaScript Skeleton/node_modules
+
+From Languges & Frameworks -> node.js and NPM - click enable node.js core
+
+6. Write in models/Task.js:
+
+const mongoose = require('mongoose');
+
+// defines the schema
+let taskSchema = mongoose.Schema({
+   title: {type: 'string', required: 'true'},
+   comments: {type: 'string', required: 'true'},
+});
+
+//turns the schema into a model
+let Task = mongoose.model('Task', taskSchema);
+
+// Make it 'public'
+module.exports = Task;
+
+7. Go to conrollers/task.js
+Write to index
+index: (req, res) => {
+   Task.find().then(tasks => {
+       res.render('task/index', {'tasks': tasks});
+   });
+},
+
+8. Write to the create get method:
+createGet: (req, res) => {
+      res.render('task/create')
+},
+
+9. Create post:
+createPost: (req, res) => {
+      // uses the post body, which contains the needed information (in this case "title" and "comments"
+      let taskArgs = req.body;
+
+      // if one of the two is null, redirect to index
+      if (taskArgs.title === "" || taskArgs.comments === ""){
+          res.redirect('/');
+          return;
+      }
+
+      // sends the body as a schema, and after creating the task redirects to index
+      Task.create(taskArgs).then(task => res.redirect('/'))
+},
+
+10. Delete Get:
+deleteGet: (req, res) => {
+      // gets the id from the request
+      let id = req.params.id;
+     
+      //finds the task from the db, if no such task exists, redirects to main
+      Task.findById(id).then(task =>{
+          if (!task){
+              res.redirect('/');
+              return
+          }
+         
+          // if task exists sends it to view
+          res.render('task/delete', task)
+      });
+},
+
+11.Delete post
+   deletePost: (req, res) => {
+
+       // gets the id from the request
+       let id = req.params.id;
+
+       // finds the task and deletes it
+       Task.findByIdAndRemove(id).then(task => {
+   res.redirect('/');
+});
+}
+
+
